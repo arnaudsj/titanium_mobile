@@ -63,8 +63,6 @@ def usage():
     --autorun                       Start running tests as soon as Drillibit starts
     --autoclose                     Close Drillbit as soon as all tests are finished running
     --web-console                   Launch Drillbit with the Web / Javascript Console showing (for debugging Drillbit itself)
-    --reset-config                  Resets current configuration of window and tests to default
-
 
     iPhone Specific Arguments
     --iphone-version=DIR            The iPhone SDK version to build against (default: 4.0)
@@ -79,9 +77,6 @@ def usage():
 	sys.exit(1)
 
 def build_and_run(args=None):
-	if len(args) == 1 and args[0] in ["--help", "-h"]:
-		usage()
-
 	# first we need to find the desktop SDK for tibuild.py
 	if platform.system() == 'Darwin':
 		base_sdk = '/Library/Application Support/Titanium/sdk/osx'
@@ -105,44 +100,41 @@ def build_and_run(args=None):
 	
 	# use the latest version in the system
 	versions.sort()
-	use_version = versions[-1]
-
+	use_version = versions[len(versions) - 1]
 	print 'Using Desktop version %s' % use_version
-
+	
 	desktop_sdk = os.path.join(base_sdk, use_version)
 	tibuild = os.path.join(desktop_sdk, 'tibuild.py')
 	drillbit_build_dir = os.path.join(mobile_dir, 'build', 'drillbit')
 	mobile_dist_dir = os.path.join(mobile_dir, 'dist')
-
+	
 	sys.path.append(mobile_dist_dir)
 	sys.path.append(os.path.join(mobile_dir, 'build'))
 	import titanium_version
-
+	
 	mobilesdk_dir = os.path.join(mobile_dist_dir, 'mobilesdk', platform_name, titanium_version.version)
 	mobilesdk_zipfile = os.path.join(mobile_dist_dir, 'mobilesdk-%s-%s.zip' % (titanium_version.version, platform_name))
 	if platform.system() == 'Darwin':
-		subprocess.Popen(['/usr/bin/unzip', '-q', '-o', '-d', mobile_dist_dir, mobilesdk_zipfile])
+		subprocess.Popen(['/usr/bin/unzip', '-q', '-o', '-d', mobile_dist_dir, os.path.join(mobile_dist_dir, 'mobilesdk-%s-%s.zip' % (titanium_version.version, platform_name))])
 	else:
 		# extract the mobilesdk zip so we can use it for testing
 		mobilesdk_zip = zipfile.ZipFile(mobilesdk_zipfile)
 		mobilesdk_zip.extractall(mobile_dist_dir)
 		mobilesdk_zip.close()
-
+	
 	if not os.path.exists(drillbit_build_dir):
 		os.makedirs(drillbit_build_dir)
-
+	
 	sys.path.append(desktop_sdk)
 	import env
 	
-	# use the desktop SDK API to stage and run drillbit (along w/ its custom modules)
+	# use the desktop SDK API to stage and run drillbit (along w/ it's custom modules)
 	environment = env.PackagingEnvironment(platform_name, False)
 	app = environment.create_app(drillbit_app_dir)
 	stage_dir = os.path.join(drillbit_build_dir, app.name)
-
-	# Desktop 1.2 doesn't pass on named-args for app subclasses
-	# stage(stage_dir, bundle=False, no_install=True, js_obfuscate=False
-	app.stage(stage_dir, False, True, False)
-
+	app.stage(stage_dir, bundle=False)
+	app.install()
+	
 	app_modules_dir = os.path.join(app.get_contents_dir(), 'modules')
 	app_tests_dir = os.path.join(app.get_contents_dir(), 'Resources', 'tests')
 	
@@ -154,11 +146,7 @@ def build_and_run(args=None):
 	
 	shutil.copytree(os.path.join(drillbit_dir, 'modules'), app_modules_dir)
 	shutil.copytree(os.path.join(drillbit_dir, 'tests'), app_tests_dir)
-
-	installed_file = os.path.join(app.get_contents_dir(), '.installed')
-	if not os.path.exists(installed_file):
-		open(installed_file, "w").write('installed')
-
+	
 	drillbit_args = [app.executable_path, '--debug', '--mobile-sdk=%s' % mobilesdk_dir, '--mobile-repository=%s' % mobile_dir]
 	if args != None:
 		drillbit_args.extend(args)

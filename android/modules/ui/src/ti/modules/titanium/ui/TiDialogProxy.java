@@ -1,14 +1,7 @@
-/**
- * Appcelerator Titanium Mobile
- * Copyright (c) 2011 by Appcelerator, Inc. All Rights Reserved.
- * Licensed under the terms of the Apache Public License
- * Please see the LICENSE included with this distribution for details.
- */
 package ti.modules.titanium.ui;
 
 import org.appcelerator.kroll.KrollDict;
 import org.appcelerator.kroll.annotations.Kroll;
-import org.appcelerator.titanium.TiC;
 import org.appcelerator.titanium.TiContext;
 import org.appcelerator.titanium.proxy.TiViewProxy;
 import org.appcelerator.titanium.util.TiUIHelper;
@@ -16,11 +9,7 @@ import org.appcelerator.titanium.util.TiUIHelper.CurrentActivityListener;
 
 import android.app.Activity;
 
-@Kroll.proxy(propertyAccessors={
-	"title", "titleid", "message",
-	"buttonNames", "androidView",
-	"options", "selectedIndex", "cancel"
-})
+@Kroll.proxy
 public abstract class TiDialogProxy extends TiViewProxy
 {
 	protected boolean showing = false;

@@ -293,8 +293,6 @@ public abstract class TiBaseActivity extends Activity
 		// Doing this on every create in case the activity is externally created.
 		TiPlatformHelper.intializeDisplayMetrics(this);
 
-		TiPlatformHelper.initializeRhinoDateFormats(this);
-
 		layout = createLayout();
 		super.onCreate(savedInstanceState);
 		getTiApp().setWindowHandler(this);

@@ -12,39 +12,25 @@ var DrillbitTest =
 	success:0,
 	failed:0,
 	totalAssertions:0,
-	testAssertions:0,
 	autoRun: true,
 	completed: false,
 
 	fireEvent: function(name, event) {
-		var osname = Ti.Platform.osname;
-		var isIOS = osname == "iphone" || osname == "ipad";
-
 		event.name = name;
-		event.platform = isIOS ? "iphone" : "android";
 		event.suite = DrillbitTest.NAME;
-
-		if (isIOS) {
-			// The console log has a character limit, so we use http to communicate events
-			var httpClient = Ti.Network.createHTTPClient();
-			var url = "http://localhost:9999";
-			httpClient.open("POST", "http://localhost:9999");
-			httpClient.send(JSON.stringify(event));
-		} else {
-			Ti.API.debug("DRILLBIT_EVENT: " + JSON.stringify(event));
-		}
+		Titanium.API.debug('DRILLBIT_EVENT: ' + JSON.stringify(event));
 	},
 	
 	runningTest: function(suite, name)
 	{
 		this.fireEvent('test', {test: name});
-		appendMessage("> running test " + name + " in suite " + suite);
+		appendMessage("> running test <span class=\"test\">" + name + "</span> in suite <span class=\"suite\">" + suite + "</span>");
 	},
 	
 	assertion: function(subject)
 	{
+		this.fireEvent('assertion', {test: DrillbitTest.currentTest, lineNumber: subject.lineNumber});
 		DrillbitTest.totalAssertions++;
-		DrillbitTest.testAssertions++;
 	},
 	
 	testPassed: function(name, lineNumber)
@@ -56,8 +42,8 @@ var DrillbitTest =
 			message: "Success",
 			lineNumber: lineNumber
 		});
-		this.fireEvent('testStatus', {test: name, lineNumber: lineNumber, passed: true, error: null, assertions: DrillbitTest.testAssertions});
-		appendMessage('>> test ' + name + ' passed', 'pass');
+		this.fireEvent('testStatus', {test: name, lineNumber: lineNumber, passed: true, error: null});
+		appendMessage('>> test <span class=\"test\">' + name + '</span> passed', 'pass');
 		if (DrillbitTest.autoRun) {
 			DrillbitTest.runNextTest();
 		}
@@ -74,9 +60,9 @@ var DrillbitTest =
 		});
 		
 		var errorMessage = String(e).replace("\n","\\n");
-		this.fireEvent('testStatus', {test: name, lineNumber: e.line, passed: false, error: errorMessage, assertions: DrillbitTest.testAssertions});
+		this.fireEvent('testStatus', {test: name, lineNumber: e.line, passed: false, error: errorMessage});
 		
-		appendMessage('>> test ' + name + ' failed: line ' + e.line + ", error: " + errorMessage, 'fail');
+		appendMessage('>> test <span class=\"test\">' + name + '</span> failed: line ' + e.line + ", error: " + errorMessage, 'fail');
 		if (DrillbitTest.autoRun) {
 			DrillbitTest.runNextTest();
 		}
@@ -86,27 +72,12 @@ var DrillbitTest =
 		this.completed = true;
 		try {
 			var results = this.getResults();
-			results.suite = DrillbitTest.NAME;
-
-			var coverage = null;
-			var resultsInfo = { suite: DrillbitTest.NAME };
-			var eventName = "complete";
+			// logcat has a character limit in Android, so we save to the sdcard and pull down from Drillbit
 			if (Ti.Platform.osname == "android") {
-				// TODO just return this as an object
-				Ti.dumpCoverage();
 				var resultsFile = Ti.Filesystem.getFile("appdata://results.json");
+				results.suite = DrillbitTest.NAME;
 				resultsFile.write(JSON.stringify(results));
-				eventName = "completeAndroid";
-				resultsInfo.resultsPath = resultsFile.getNativePath();
-				resultsInfo.coveragePath = Ti.Filesystem.getFile("appdata://coverage.json").getNativePath();
-			} else {
-				coverage = Ti.dumpCoverage();
-				resultsInfo.results = results;
-				resultsInfo.coverage = coverage;
-			}
-
-			this.fireEvent(eventName, resultsInfo);
-			if (Ti.Platform.osname == "android") {
+				this.fireEvent("completeAndroid", {});
 				try {
 					if (TestHarnessRunner) {
 						var bundle = new (Packages.android.os.Bundle)();
@@ -115,6 +86,8 @@ var DrillbitTest =
 				} catch (e) {
 					Titanium.API.debug('TestHarnessRunner not defined, skipping automated finish');
 				}
+			} else {
+				this.fireEvent("complete", results);
 			}
 		} catch (e) {
 			Titanium.API.error("Exception on completion: "+e);
@@ -137,7 +110,6 @@ var DrillbitTest =
 	},
 	
 	runNextTest: function() {
-		this.testAssertions = 0;
 		if (this.tests.length == 0) {
 			this.onComplete();
 		} else {
@@ -199,13 +171,8 @@ DrillbitTest.Scope.prototype.passed = function()
 	{
 		this._completed = true;
 		if (DrillbitTest.currentSubject)
-		{	
-			var lineNumber = 0;
-			if ("lineNumber" in DrillbitTest.currentSubject) {
-				lineNumber = DrillbitTest.currentSubject.lineNumber;
-			}
-			DrillbitTest.testPassed(this._testName, lineNumber);
-
+		{
+			DrillbitTest.testPassed(this._testName,DrillbitTest.currentSubject.lineNumber);
 		}
 		else
 		{
@@ -562,13 +529,6 @@ AsyncTest.prototype.start = function(callback) {
 		callback.failed(e);
 		return;
 	}
-};
-
-AsyncTest.prototype.failed = function(e) {
-	if (this.timer != null) {
-		clearTimeout(this.timer);
-	}
-	this.callback.failed(e);
 };
 
 function asyncTest(args) {

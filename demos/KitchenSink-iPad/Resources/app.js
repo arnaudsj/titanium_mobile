@@ -85,7 +85,7 @@ var b6 = Ti.UI.createButton({
 	title:'Bug 3298',
 	width:300,
 	height:50,
-	top:450
+	top:380
 });
 b6.addEventListener('click', function()
 {
@@ -104,5 +104,7 @@ b7.addEventListener('click', function()
 	SplitFeatures.open();
 });
 win.add(b7);
+
+
 
 win.open();

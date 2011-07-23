@@ -79,6 +79,7 @@ public class TiProperties
 		if (DBG) {
 			Log.d(LCAT,"getDouble called with key:"+key+", def:"+def);
 		}
+
 		if (!hasProperty(key)) {
 			return def;
 		}
@@ -95,7 +96,7 @@ public class TiProperties
 		if (DBG) {
 			Log.d(LCAT,"setDouble called with key:"+key+", value:"+value);
 		}
-		
+
 		SharedPreferences.Editor editor = preferences.edit();
 		editor.putString(key,value + "");
 		editor.commit();
